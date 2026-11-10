@@ -66,11 +66,15 @@ export default function Bills({ scope }: { scope: 'house' | 'personal' }) {
                     )}
                     <td>Dia {dd(b.due_day)}</td>
                     <td>{period(b)}</td>
-                    <td style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                      {b.category && <span className="chip gray">{b.category}</span>}
-                      {b.is_housing && <span className="chip blue">moradia</span>}
-                      {b.estimated && <span className="chip amber">estimado</span>}
-                      {b.featured && <span className="chip green">destaque</span>}
+                    <td>
+                      <div className="tags">
+                        {b.category && !(b.is_housing && b.category.toLowerCase() === 'moradia') && (
+                          <span className="chip gray">{b.category}</span>
+                        )}
+                        {b.is_housing && <span className="chip blue">moradia</span>}
+                        {b.estimated && <span className="chip amber">estimado</span>}
+                        {b.featured && <span className="chip green">destaque</span>}
+                      </div>
                     </td>
                     <td className="r"><b>{money(b.amount_cents)}</b></td>
                     <td className="r">
