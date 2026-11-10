@@ -1,0 +1,9 @@
+{
+  "name": "Duo Finn — Finanças em casal",
+  "short_name": "Duo Finn",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f4f6fb",
+  "theme_color": "#2563eb",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}
