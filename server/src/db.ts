@@ -1,27 +1,38 @@
-import { createClient, type InValue } from '@libsql/client';
-import { mkdirSync } from 'node:fs';
+import pg from 'pg';
 
 /**
  * DATABASE_URL:
- *  - local (padrão): file:./data/finances.db
- *  - Turso (produção gratuita): libsql://<db>-<org>.turso.io  + DATABASE_AUTH_TOKEN
+ *  - local (padrão): Postgres do docker-compose -> postgres://finances:finances@localhost:5433/finances
+ *  - produção: qualquer Postgres (ex.: Neon grátis) -> postgres://user:pass@host/db?sslmode=require
  */
-const url = process.env.DATABASE_URL || 'file:./data/finances.db';
-if (url.startsWith('file:')) mkdirSync('./data', { recursive: true });
+const connectionString = process.env.DATABASE_URL || 'postgres://finances:finances@localhost:5433/finances';
 
-export const db = createClient({ url, authToken: process.env.DATABASE_AUTH_TOKEN });
+// BIGINT (int8) e NUMERIC como number; DATE como string 'AAAA-MM-DD'
+pg.types.setTypeParser(20, (v) => Number(v));
+pg.types.setTypeParser(1700, (v) => Number(v));
+pg.types.setTypeParser(1082, (v) => v);
 
-export async function all<T = Record<string, unknown>>(sql: string, args: InValue[] = []): Promise<T[]> {
-  const rs = await db.execute({ sql, args });
-  return rs.rows.map((r) => ({ ...r }) as T);
+export const pool = new pg.Pool({ connectionString, max: 5 });
+
+type Arg = string | number | boolean | null | undefined;
+
+/** Converte placeholders "?" em "$1, $2..." (estilo Postgres). */
+function toPg(sql: string) {
+  let i = 0;
+  return sql.replace(/\?/g, () => `$${++i}`);
 }
 
-export async function one<T = Record<string, unknown>>(sql: string, args: InValue[] = []): Promise<T | undefined> {
+export async function all<T = Record<string, unknown>>(sql: string, args: Arg[] = []): Promise<T[]> {
+  const rs = await pool.query(toPg(sql), args);
+  return rs.rows as T[];
+}
+
+export async function one<T = Record<string, unknown>>(sql: string, args: Arg[] = []): Promise<T | undefined> {
   return (await all<T>(sql, args))[0];
 }
 
-export async function run(sql: string, args: InValue[] = []) {
-  return db.execute({ sql, args });
+export async function run(sql: string, args: Arg[] = []) {
+  return pool.query(toPg(sql), args);
 }
 
 const SCHEMA = [
@@ -30,63 +41,63 @@ const SCHEMA = [
     value TEXT NOT NULL
   )`,
   `CREATE TABLE IF NOT EXISTS incomes (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id SERIAL PRIMARY KEY,
     owner TEXT NOT NULL CHECK (owner IN ('me','partner')),
     description TEXT NOT NULL,
-    amount_cents INTEGER NOT NULL,
+    amount_cents BIGINT NOT NULL,
     start_month TEXT,
     end_month TEXT
   )`,
   `CREATE TABLE IF NOT EXISTS bills (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
-    amount_cents INTEGER NOT NULL,
+    amount_cents BIGINT NOT NULL,
     scope TEXT NOT NULL CHECK (scope IN ('house','personal')),
     payer TEXT NOT NULL DEFAULT 'me' CHECK (payer IN ('me','partner')),
     due_day INTEGER NOT NULL DEFAULT 5,
-    is_housing INTEGER NOT NULL DEFAULT 0,
-    estimated INTEGER NOT NULL DEFAULT 0,
-    featured INTEGER NOT NULL DEFAULT 0,
+    is_housing BOOLEAN NOT NULL DEFAULT FALSE,
+    estimated BOOLEAN NOT NULL DEFAULT FALSE,
+    featured BOOLEAN NOT NULL DEFAULT FALSE,
     category TEXT,
     note TEXT,
     start_month TEXT,
     end_month TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
   )`,
   `CREATE TABLE IF NOT EXISTS cards (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
     bank TEXT NOT NULL,
     color TEXT NOT NULL DEFAULT '#1f1f1f',
     closing_day INTEGER NOT NULL DEFAULT 28,
     due_day INTEGER NOT NULL DEFAULT 5,
-    limit_cents INTEGER NOT NULL DEFAULT 0
+    limit_cents BIGINT NOT NULL DEFAULT 0
   )`,
   `CREATE TABLE IF NOT EXISTS invoices (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id SERIAL PRIMARY KEY,
     card_id INTEGER NOT NULL REFERENCES cards(id) ON DELETE CASCADE,
     month TEXT NOT NULL,
-    amount_cents INTEGER NOT NULL,
+    amount_cents BIGINT NOT NULL,
     UNIQUE (card_id, month)
   )`,
   `CREATE TABLE IF NOT EXISTS payments (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id SERIAL PRIMARY KEY,
     ref_type TEXT NOT NULL CHECK (ref_type IN ('bill','invoice')),
     ref_id INTEGER NOT NULL,
     month TEXT NOT NULL,
-    paid_at TEXT NOT NULL DEFAULT (datetime('now')),
+    paid_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE (ref_type, ref_id, month)
   )`,
   `CREATE TABLE IF NOT EXISTS reserve_entries (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    date TEXT NOT NULL,
+    id SERIAL PRIMARY KEY,
+    date DATE NOT NULL,
     description TEXT NOT NULL,
-    amount_cents INTEGER NOT NULL
+    amount_cents BIGINT NOT NULL
   )`,
   `CREATE TABLE IF NOT EXISTS settlements (
     month TEXT PRIMARY KEY,
-    amount_cents INTEGER NOT NULL,
-    done_at TEXT NOT NULL DEFAULT (datetime('now'))
+    amount_cents BIGINT NOT NULL,
+    done_at TIMESTAMPTZ NOT NULL DEFAULT now()
   )`,
 ];
 
@@ -102,7 +113,7 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
 export async function migrate() {
   for (const sql of SCHEMA) await run(sql);
   for (const [k, v] of Object.entries(DEFAULT_SETTINGS)) {
-    await run('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)', [k, v]);
+    await run('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO NOTHING', [k, v]);
   }
 }
 

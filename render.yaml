@@ -13,7 +13,5 @@ services:
         sync: false
       - key: AUTH_SECRET
         generateValue: true
-      - key: DATABASE_URL
-        sync: false
-      - key: DATABASE_AUTH_TOKEN
+      - key: DATABASE_URL # Postgres do Neon (grátis): postgres://...?sslmode=require
         sync: false

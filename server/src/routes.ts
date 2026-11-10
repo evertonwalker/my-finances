@@ -29,11 +29,10 @@ function crud(path: string, table: string, schema: z.ZodObject<Record<string, Zo
     if (!parsed.success) return c.json({ error: 'validation', issues: parsed.error.issues }, 400);
     const data = toDb(parsed.data);
     const cols = Object.keys(data);
-    const rs = await run(
-      `INSERT INTO ${table} (${cols.join(',')}) VALUES (${cols.map(() => '?').join(',')})`,
+    const row = await one(
+      `INSERT INTO ${table} (${cols.join(',')}) VALUES (${cols.map(() => '?').join(',')}) RETURNING *`,
       cols.map((k) => data[k] as never),
     );
-    const row = await one(`SELECT * FROM ${table} WHERE id = ?`, [Number(rs.lastInsertRowid)]);
     return c.json(map(row!), 201);
   });
 
@@ -74,11 +73,6 @@ crud(
 );
 
 // ---------- Contas (casa e pessoais) ----------
-const boolToInt = (d: Row) => {
-  const out: Row = { ...d };
-  for (const k of ['is_housing', 'estimated', 'featured']) if (k in out) out[k] = out[k] ? 1 : 0;
-  return out;
-};
 const mapBill = (r: Row) => ({
   ...r,
   is_housing: bool(r.is_housing),
@@ -102,7 +96,7 @@ crud(
     start_month: OptMonth,
     end_month: OptMonth,
   }),
-  { order: 'scope, amount_cents DESC', map: mapBill, toDb: boolToInt },
+  { order: 'scope, amount_cents DESC', map: mapBill },
 );
 
 // ---------- Cartões ----------
@@ -204,7 +198,7 @@ api.put('/settings', async (c) => {
   if (!parsed.success) return c.json({ error: 'validation', issues: parsed.error.issues }, 400);
   for (const [k, v] of Object.entries(parsed.data)) {
     if (k in DEFAULT_SETTINGS && v !== undefined) {
-      await run('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value', [k, String(v)]);
+      await run('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value', [k, String(v)]);
     }
   }
   return c.json(await getSettings());

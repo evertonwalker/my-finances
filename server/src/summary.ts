@@ -4,7 +4,7 @@ import { activeIn, addMonths, bool } from './util.js';
 type Income = { id: number; owner: 'me' | 'partner'; description: string; amount_cents: number; start_month: string | null; end_month: string | null };
 type Bill = {
   id: number; name: string; amount_cents: number; scope: 'house' | 'personal'; payer: 'me' | 'partner'; due_day: number;
-  is_housing: number; estimated: number; featured: number; category: string | null; note: string | null;
+  is_housing: boolean; estimated: boolean; featured: boolean; category: string | null; note: string | null;
   start_month: string | null; end_month: string | null;
 };
 type Card = { id: number; name: string; bank: string; color: string; closing_day: number; due_day: number; limit_cents: number };

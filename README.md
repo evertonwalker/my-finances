@@ -9,16 +9,30 @@ Tem CRUD para tudo, light/dark mode, layout responsivo (dá para instalar no cel
 |---|---|
 | Frontend | React 18 + Vite + TypeScript, CSS puro com variáveis (tema claro/escuro), lucide-react |
 | Backend | Node 22 + [Hono](https://hono.dev) + zod |
-| Banco | SQLite via `@libsql/client`: arquivo local em dev, [Turso](https://turso.tech) (grátis) em produção |
+| Banco | PostgreSQL 16 (`pg`): container Docker em dev, [Neon](https://neon.tech) (grátis) em produção |
 | Deploy | Um único serviço (a API também entrega o frontend), pronto para o Render (plano free) |
 
 ## Rodando localmente
 
+Pré-requisitos: Node 20+ e Docker.
+
 ```bash
 npm install
+npm run db:up    # sobe o Postgres em container (localhost:5433, usuário/senha/banco: finances)
 npm run seed     # (opcional) carrega os dados de exemplo do layout — apaga os dados atuais
 npm run dev      # API em :3333 + frontend em http://localhost:5173
 ```
+
+As tabelas são criadas automaticamente quando a API sobe. Outros comandos:
+
+```bash
+npm run db:psql  # abre o psql dentro do container
+npm run db:down  # para o container (os dados ficam no volume "pgdata")
+docker compose down -v   # para E apaga os dados
+```
+
+A porta do host é **5433** para não conflitar com um Postgres instalado na máquina.
+Para usar outro banco, defina `DATABASE_URL` (veja `.env.example`).
 
 Para testar no celular pela mesma rede Wi-Fi, abra `http://<ip-do-pc>:5173`.
 
@@ -36,23 +50,18 @@ Produção local: `npm run build && npm start` → http://localhost:3333
 
 ## Deploy grátis (para usar na rua)
 
-### 1. Banco no Turso (gratuito e persistente)
+### 1. Postgres no Neon (gratuito e persistente)
 
-```bash
-# instale a CLI: https://docs.turso.tech/cli/installation
-turso auth signup
-turso db create my-finances
-turso db show my-finances --url        # -> DATABASE_URL (libsql://...)
-turso db tokens create my-finances     # -> DATABASE_AUTH_TOKEN
-```
+1. Crie uma conta em https://neon.tech e um projeto `my-finances`.
+2. Copie a *connection string* (`postgres://...neon.tech/neondb?sslmode=require`). Ela é a `DATABASE_URL`.
 
-> No plano free do Render o disco é apagado a cada deploy ou reinício, por isso o banco fica no Turso.
+> O Postgres gratuito do Render expira em 30 dias, por isso a sugestão é o Neon.
 
 ### 2. App no Render
 
 1. Suba este repositório no GitHub.
 2. No Render: **New → Blueprint** e selecione o repositório (ele lê o `render.yaml`).
-3. Preencha `APP_PASSWORD`, `DATABASE_URL` e `DATABASE_AUTH_TOKEN`.
+3. Preencha `APP_PASSWORD` e `DATABASE_URL`.
 4. Abra a URL `https://my-finances-xxxx.onrender.com` no celular e use **"Adicionar à tela inicial"**.
 
 > O plano free "dorme" depois de 15 min sem uso. O primeiro acesso depois disso leva uns 30 a 50 s.
@@ -83,7 +92,7 @@ server/src
   index.ts     # servidor Hono, login, arquivos estáticos
   routes.ts    # CRUD + validação (zod)
   summary.ts   # cálculos do painel e do fluxo de caixa
-  db.ts        # schema/migração (SQLite/libSQL)
+  db.ts        # pool do Postgres + schema/migração automática
   seed.ts      # dados de exemplo
 web/src
   pages/       # Dashboard, CashFlow, Cards, House, Reserve, Income, Bills

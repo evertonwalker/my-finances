@@ -12,6 +12,9 @@
     "build": "npm run build -w web",
     "start": "npm run start -w server",
     "seed": "npm run seed -w server",
+    "db:up": "docker compose up -d --wait",
+    "db:down": "docker compose down",
+    "db:psql": "docker exec -it my-finances-db psql -U finances -d finances",
     "typecheck": "npm run typecheck -w server && npm run typecheck -w web"
   },
   "devDependencies": {
