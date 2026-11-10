@@ -1,17 +1,12 @@
-export type Owner = 'me' | 'partner';
-
 export interface Settings {
   me_name: string;
-  partner_name: string;
-  my_share_pct: number;
-  daily_budget_cents: number;
+  month_budget_cents: number;
   housing_ref_pct: number;
   reserve_goal_cents: number;
 }
 
 export interface Income {
   id: number;
-  owner: Owner;
   description: string;
   amount_cents: number;
   start_month: string | null;
@@ -23,7 +18,6 @@ export interface Bill {
   name: string;
   amount_cents: number;
   scope: 'house' | 'personal';
-  payer: Owner;
   due_day: number;
   is_housing: boolean;
   estimated: boolean;
@@ -32,6 +26,16 @@ export interface Bill {
   note: string | null;
   start_month: string | null;
   end_month: string | null;
+}
+
+export type ExpenseCategory = 'comida' | 'roupas' | 'eventualidades' | 'outros';
+
+export interface MonthlyExpense {
+  id: number;
+  date: string;
+  description: string;
+  category: ExpenseCategory;
+  amount_cents: number;
 }
 
 export interface Card {
@@ -74,33 +78,26 @@ export interface Summary {
   settings: Settings;
   balance: {
     salary_cents: number;
-    house_share_cents: number;
+    house_cents: number;
     personal_cents: number;
-    daily_cents: number;
+    month_cents: number;
     free_cents: number;
-    pct: { house: number; personal: number; daily: number; free: number };
+    pct: { house: number; personal: number; month: number; free: number };
   };
-  income: { me_cents: number; partner_cents: number; couple_cents: number };
-  house: {
-    total_cents: number;
-    paid_by_me_cents: number;
-    paid_by_partner_cents: number;
-    my_share_cents: number;
-    partner_share_cents: number;
-    me_pct: number;
-    partner_pct: number;
-    share_pct: number;
-    bills: { id: number; name: string; amount_cents: number; payer: Owner }[];
-    settlement: { amount_cents: number; done: boolean };
+  month_expenses: {
+    spent_cents: number;
+    budget_cents: number;
+    remaining_cents: number;
+    pct_of_budget: number;
+    by_category: { category: ExpenseCategory; total_cents: number; count: number }[];
+    recent: MonthlyExpense[];
   };
   payables: { total_cents: number; count: number; paid_count: number; items: PayItem[] };
   housing: {
     total_cents: number;
-    couple_total_cents: number;
-    pct_of_my_salary: number;
-    pct_of_couple_salary: number;
+    pct_of_salary: number;
     ref_pct: number;
-    items: { id: number; name: string; category: string | null; estimated: boolean; amount_cents: number; share_cents: number }[];
+    items: { id: number; name: string; category: string | null; estimated: boolean; amount_cents: number }[];
   };
   cards: (Card & { invoice: (Invoice & { paid: boolean }) | null; free_limit_cents: number })[];
   invoice_timeline: { month: string; total_cents: number }[];
@@ -110,9 +107,9 @@ export interface Summary {
 export interface CashflowRow {
   month: string;
   salary_cents: number;
-  house_share_cents: number;
+  house_cents: number;
   personal_cents: number;
-  daily_cents: number;
+  month_cents: number;
   free_cents: number;
   accumulated_cents: number;
 }

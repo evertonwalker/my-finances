@@ -1,9 +1,9 @@
 import {
-  ArrowLeftRight, Bell, Building2, ChevronDown, ChevronLeft, ChevronRight, CreditCard, Home, LayoutGrid, LogOut,
-  Menu, Moon, PiggyBank, Plus, Receipt, Sun, Wallet,
+  ArrowLeftRight, Bell, ChevronDown, ChevronLeft, ChevronRight, CreditCard, Home, LayoutGrid, LogOut,
+  Menu, Moon, PiggyBank, Plus, Receipt, ShoppingBag, Sun, Wallet,
 } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 import { getToken, setToken } from '../api';
 import { addMonths, currentMonth, daysUntil, dd, dueDate, money, monthLong, monthName, monthYear } from '../format';
 import { useApp, useFetch } from '../store';
@@ -11,13 +11,13 @@ import type { Summary } from '../types';
 
 const MENU = [
   { to: '/', label: 'Visão geral', icon: LayoutGrid },
+  { to: '/contas-mes', label: 'Contas do mês', icon: ShoppingBag },
   { to: '/fluxo', label: 'Fluxo de caixa', icon: ArrowLeftRight },
   { to: '/cartoes', label: 'Cartões', icon: CreditCard },
-  { to: '/casa', label: 'Nossa casa', icon: Building2 },
-  { to: '/reserva', label: 'Nossa reserva', icon: PiggyBank },
+  { to: '/reserva', label: 'Minha reserva', icon: PiggyBank },
 ];
 const SETTINGS_MENU = [
-  { to: '/renda', label: 'Nossa renda', icon: Wallet },
+  { to: '/renda', label: 'Minha renda', icon: Wallet },
   { to: '/contas-casa', label: 'Contas da casa', icon: Home },
   { to: '/contas-pessoais', label: 'Contas pessoais', icon: Receipt },
 ];
@@ -38,10 +38,10 @@ export function Layout({ children }: { children: ReactNode }) {
       <nav className="bottom-nav">
         {[
           { ...MENU[0], short: 'Início' },
+          { ...MENU[1], short: 'Do mês' },
           { ...SETTINGS_MENU[1], short: 'Casa' },
           { ...SETTINGS_MENU[2], short: 'Pessoais' },
-          { ...MENU[2], short: 'Cartões' },
-          { ...MENU[4], short: 'Reserva' },
+          { ...MENU[3], short: 'Cartões' },
         ].map((m) => (
           <NavLink key={m.to} to={m.to} end>
             <m.icon size={20} />
@@ -55,18 +55,14 @@ export function Layout({ children }: { children: ReactNode }) {
 
 function Sidebar({ open }: { open: boolean }) {
   const { settings, theme, setTheme } = useApp();
-  const me = settings?.me_name ?? 'Pessoa 1';
-  const partner = settings?.partner_name ?? 'Parceiro(a)';
+  const me = settings?.me_name ?? 'Você';
   return (
     <aside className={`sidebar ${open ? 'open' : ''}`}>
       <div className="brand">
-        <div className="avatars">
-          <span className="avatar me">{me.charAt(0)}</span>
-          <span className="avatar partner">{partner.charAt(0)}</span>
-        </div>
+        <span className="avatar me" aria-hidden>F</span>
         <div>
-          <div className="brand-title">Duo Finn</div>
-          <div className="brand-sub">Finanças em casal</div>
+          <div className="brand-title">Finn</div>
+          <div className="brand-sub">Minhas finanças</div>
         </div>
       </div>
       <nav className="nav">
@@ -101,7 +97,7 @@ function Sidebar({ open }: { open: boolean }) {
           <span className="avatar me">{me.charAt(0)}</span>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div className="name">{me}</div>
-            <div className="status">com {partner}</div>
+            <Link to="/renda" className="label">Configurações</Link>
           </div>
           {getToken() && (
             <button
@@ -215,7 +211,7 @@ function Topbar({ onMenu }: { onMenu: () => void }) {
         </div>
         <div className="dropdown" ref={addRef}>
           <div className="split-btn">
-            <button className="btn primary" onClick={() => add({ kind: 'bill', scope: 'house' })}>
+            <button className="btn primary" onClick={() => add({ kind: 'expense' })} title="Lançar gasto do mês">
               <Plus size={16} /> <span className="add-label">Adicionar</span>
             </button>
             <button className="btn primary" onClick={() => setAddOpen((v) => !v)} aria-label="Mais opções">
@@ -224,6 +220,7 @@ function Topbar({ onMenu }: { onMenu: () => void }) {
           </div>
           {addOpen && (
             <div className="dropdown-menu">
+              <button onClick={() => add({ kind: 'expense' })}><ShoppingBag size={16} /> Gasto do mês</button>
               <button onClick={() => add({ kind: 'bill', scope: 'house' })}><Home size={16} /> Conta da casa</button>
               <button onClick={() => add({ kind: 'bill', scope: 'personal' })}><Receipt size={16} /> Conta pessoal</button>
               <button onClick={() => add({ kind: 'invoice', month })}><CreditCard size={16} /> Fatura de cartão</button>

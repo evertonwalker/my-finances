@@ -7,8 +7,8 @@ import Bills from './pages/Bills';
 import Cards from './pages/Cards';
 import CashFlow from './pages/CashFlow';
 import Dashboard from './pages/Dashboard';
-import House from './pages/House';
 import Income from './pages/Income';
+import MonthExpenses from './pages/MonthExpenses';
 import Reserve from './pages/Reserve';
 import { AppProvider, useApp } from './store';
 
@@ -33,9 +33,9 @@ export default function App() {
       <Layout>
         <Routes>
           <Route path="/" element={<Dashboard />} />
+          <Route path="/contas-mes" element={<MonthExpenses />} />
           <Route path="/fluxo" element={<CashFlow />} />
           <Route path="/cartoes" element={<Cards />} />
-          <Route path="/casa" element={<House />} />
           <Route path="/reserva" element={<Reserve />} />
           <Route path="/renda" element={<Income />} />
           <Route path="/contas-casa" element={<Bills scope="house" />} />
@@ -78,13 +78,10 @@ function Login({ onOk }: { onOk: () => void }) {
     <div className="login">
       <form className="card" onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <div className="brand" style={{ padding: 0 }}>
-          <div className="avatars">
-            <span className="avatar me">1</span>
-            <span className="avatar partner">2</span>
-          </div>
+          <span className="avatar me" aria-hidden>F</span>
           <div>
-            <div className="brand-title">Duo Finn</div>
-            <div className="brand-sub">Finanças em casal</div>
+            <div className="brand-title">Finn</div>
+            <div className="brand-sub">Minhas finanças</div>
           </div>
         </div>
         <label className="field">

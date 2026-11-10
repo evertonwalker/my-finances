@@ -13,7 +13,7 @@ export default function CashFlow() {
       <div className="page-head">
         <div>
           <h2>Fluxo de caixa</h2>
-          <div className="sub">Projeção dos próximos 12 meses a partir do mês selecionado, com base nas contas recorrentes e faturas lançadas.</div>
+          <div className="sub">Projeção dos próximos 12 meses a partir do mês selecionado, com base nas contas recorrentes, faturas lançadas e no orçamento das contas do mês (ou no gasto real, se for maior).</div>
         </div>
       </div>
       {error && <p className="neg">{error}</p>}
@@ -47,9 +47,9 @@ export default function CashFlow() {
                 <tr>
                   <th>Mês</th>
                   <th className="r">Salário</th>
-                  <th className="r">Metade da casa</th>
+                  <th className="r">Contas da casa</th>
                   <th className="r">Contas pessoais</th>
-                  <th className="r hide-sm">Dia a dia</th>
+                  <th className="r hide-sm">Contas do mês</th>
                   <th className="r">Sobra</th>
                   <th className="r hide-sm">Acumulado</th>
                 </tr>
@@ -59,9 +59,9 @@ export default function CashFlow() {
                   <tr key={r.month}>
                     <td><b>{monthShort(r.month)}</b></td>
                     <td className="r">{money(r.salary_cents)}</td>
-                    <td className="r">− {money(r.house_share_cents)}</td>
+                    <td className="r">− {money(r.house_cents)}</td>
                     <td className="r">− {money(r.personal_cents)}</td>
-                    <td className="r hide-sm">− {money(r.daily_cents)}</td>
+                    <td className="r hide-sm">− {money(r.month_cents)}</td>
                     <td className={`r ${r.free_cents >= 0 ? 'pos' : 'neg'}`}><b>{money(r.free_cents)}</b></td>
                     <td className="r hide-sm">{money(r.accumulated_cents)}</td>
                   </tr>

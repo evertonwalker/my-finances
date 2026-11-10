@@ -1,7 +1,8 @@
-﻿import { ArrowDownRight, ArrowUpRight, Building, Check, ChevronLeft, ChevronRight, CreditCard, KeyRound, Pencil, Wifi, Zap, Home } from 'lucide-react';
+﻿import { ArrowDownRight, ArrowUpRight, Building, Check, ChevronLeft, ChevronRight, CreditCard, KeyRound, Pencil, Plus, Wifi, Zap, Home } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
+import { categoryInfo } from '../categories';
 import { Money, Skeleton } from '../components/ui';
 import { daysUntil, dd, dueDate, money, monthName, monthShort, pct } from '../format';
 import { useApp, useFetch } from '../store';
@@ -25,7 +26,7 @@ export default function Dashboard() {
     <div className="grid">
       <div className="dash-left">
         <div className="span-2"><BalanceCard s={data} /></div>
-        <HouseSplitCard s={data} />
+        <MonthSpendingCard s={data} />
         <CardsCard s={data} />
       </div>
       <div className="col-3-stack">
@@ -52,15 +53,15 @@ export default function Dashboard() {
 }
 
 // ------------------------------------------------------------------
-export function BalanceCard({ s }: { s: Summary }) {
+function BalanceCard({ s }: { s: Summary }) {
   const b = s.balance;
   const positive = b.free_cents >= 0;
   const segs = [
-    { label: 'Sua metade da casa', v: b.house_share_cents, p: b.pct.house, color: 'var(--navy)' },
+    { label: 'Contas da casa', v: b.house_cents, p: b.pct.house, color: 'var(--navy)' },
     { label: 'Contas pessoais', v: b.personal_cents, p: b.pct.personal, color: 'var(--primary)' },
-    { label: 'Dia a dia', v: b.daily_cents, p: b.pct.daily, color: 'var(--surface-3)' },
+    { label: 'Contas do mês', v: b.month_cents, p: b.pct.month, color: 'var(--amber)' },
   ];
-  const total = Math.max(b.salary_cents, b.house_share_cents + b.personal_cents + b.daily_cents, 1);
+  const total = Math.max(b.salary_cents, b.house_cents + b.personal_cents + b.month_cents, 1);
   return (
     <div className="card">
       <div className="card-head">
@@ -108,7 +109,86 @@ export function BalanceCard({ s }: { s: Summary }) {
 }
 
 // ------------------------------------------------------------------
-export function PayablesCard({ s }: { s: Summary }) {
+export function MonthSpendingCard({ s }: { s: Summary }) {
+  const { openForm } = useApp();
+  const m = s.month_expenses;
+  const over = m.budget_cents > 0 && m.spent_cents > m.budget_cents;
+  const max = Math.max(...m.by_category.map((c) => c.total_cents), 1);
+
+  return (
+    <div className="card">
+      <div className="card-head">
+        <div>
+          <div className="card-title">Contas do mês</div>
+          <div className="label" style={{ marginTop: 14 }}>Gasto em {monthName(s.month).toLowerCase()}</div>
+          <Money cents={m.spent_cents} size="lg" className={over ? 'neg' : ''} />
+          <div className="sub" style={{ marginTop: 4 }}>
+            {m.budget_cents > 0 ? (
+              over ? (
+                <b className="neg">{money(-m.remaining_cents)} acima do orçamento</b>
+              ) : (
+                <>
+                  <b className="pos">{money(m.remaining_cents)} livres</b> de {money(m.budget_cents)}
+                </>
+              )
+            ) : (
+              <Link to="/renda" style={{ color: 'var(--primary)' }}>Definir orçamento mensal</Link>
+            )}
+          </div>
+        </div>
+        <div className="illus" aria-hidden>🛍️</div>
+      </div>
+      {m.budget_cents > 0 && (
+        <div className="gauge" style={{ margin: '16px 0 0' }}>
+          <div className="track">
+            <div
+              className={`bar ${over ? 'bad' : m.pct_of_budget > 80 ? 'warn' : ''}`}
+              style={{ width: `${Math.min(m.pct_of_budget, 100)}%` }}
+            />
+          </div>
+        </div>
+      )}
+      <div className="cat-bars">
+        {m.by_category.map((c) => {
+          const info = categoryInfo(c.category);
+          return (
+            <div className="cat-bar" key={c.category}>
+              <div className="row">
+                <span>{info.emoji} {info.label} <span className="muted">· {c.count}</span></span>
+                <b>{money(c.total_cents)}</b>
+              </div>
+              <div className="track">
+                <div className="fill" style={{ width: `${(c.total_cents / max) * 100}%`, background: info.color }} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="card-title" style={{ fontSize: 12, marginTop: 22 }}>Últimos gastos</div>
+      <ul className="list">
+        {m.recent.map((e) => (
+          <li key={e.id} onClick={() => openForm({ kind: 'expense', item: e })} style={{ cursor: 'pointer' }}>
+            <span aria-hidden>{categoryInfo(e.category).emoji}</span>
+            <span className="grow">
+              {e.description} <span className="label">· {e.date.slice(8, 10)}/{e.date.slice(5, 7)}</span>
+            </span>
+            <span className="amt">{money(e.amount_cents)}</span>
+          </li>
+        ))}
+        {m.recent.length === 0 && <li className="muted">Nenhum gasto lançado neste mês.</li>}
+      </ul>
+      <div className="settle">
+        <Link to="/contas-mes" className="txt" style={{ color: 'var(--primary)', fontWeight: 600 }}>Ver todos</Link>
+        <button className="btn sm primary" onClick={() => openForm({ kind: 'expense' })}>
+          <Plus size={14} /> Lançar gasto
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------
+function PayablesCard({ s }: { s: Summary }) {
   const { refresh, toast } = useApp();
   const items = s.payables.items;
   const days = useMemo(() => {
@@ -172,72 +252,6 @@ export function PayablesCard({ s }: { s: Summary }) {
             </li>
           ))}
         </ul>
-      )}
-    </div>
-  );
-}
-
-// ------------------------------------------------------------------
-export function HouseSplitCard({ s }: { s: Summary }) {
-  const { refresh, toast } = useApp();
-  const h = s.house;
-  const me = s.settings.me_name;
-  const partner = s.settings.partner_name;
-  const st = h.settlement;
-  const iReceive = st.amount_cents > 0;
-
-  const toggle = async () => {
-    const r = await api.post<{ done: boolean }>(`/settlements/${s.month}/toggle`, { amount_cents: st.amount_cents });
-    toast(r.done ? 'Acerto registrado ✔' : 'Acerto desfeito');
-    refresh();
-  };
-
-  return (
-    <div className="card">
-      <div className="card-head">
-        <div>
-          <div className="card-title">Divisão da casa</div>
-          <div className="label" style={{ marginTop: 14 }}>Total das contas</div>
-          <Money cents={h.total_cents} size="lg" />
-        </div>
-        <div className="illus" aria-hidden>⚖️</div>
-      </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', margin: '18px 0 6px' }}>
-        <div>
-          <div className="label"><span className="dot" style={{ background: 'var(--primary)' }} /> Você paga</div>
-          <b style={{ fontSize: 15 }}>{money(h.paid_by_me_cents)}</b>
-        </div>
-        <div style={{ textAlign: 'right' }}>
-          <div className="label">{partner} paga <span className="dot" style={{ background: 'var(--pink)' }} /></div>
-          <b style={{ fontSize: 15 }}>{money(h.paid_by_partner_cents)}</b>
-        </div>
-      </div>
-      <div className="split-bar">
-        <div style={{ width: `${h.me_pct}%`, background: 'var(--primary)' }}>{h.me_pct > 12 && pct(h.me_pct)}</div>
-        <div style={{ flex: 1, background: 'var(--pink)', justifyContent: 'flex-end' }}>{h.partner_pct > 12 && pct(h.partner_pct)}</div>
-        <span className="marker" style={{ left: `calc(${h.share_pct}% - 1px)` }} title={`Divisão combinada: ${h.share_pct}%`} />
-      </div>
-      <div className="card-title" style={{ fontSize: 12, marginTop: 22 }}>Quem paga cada conta</div>
-      <ul className="list">
-        {h.bills.map((b) => (
-          <li key={b.id}>
-            <span className="dot" style={{ background: b.payer === 'me' ? 'var(--primary)' : 'var(--pink)' }} />
-            <span className="grow">{b.name}</span>
-            <span className="amt">{money(b.amount_cents)}</span>
-          </li>
-        ))}
-        {h.bills.length === 0 && <li className="muted">Nenhuma conta da casa. Cadastre em “Contas da casa”.</li>}
-      </ul>
-      {st.amount_cents !== 0 && (
-        <div className="settle">
-          <span className={`avatar sm ${iReceive ? 'partner' : 'me'}`}>{(iReceive ? partner : me).charAt(0)}</span>
-          <span className="muted">→</span>
-          <span className={`avatar sm ${iReceive ? 'me' : 'partner'}`}>{(iReceive ? me : partner).charAt(0)}</span>
-          <span className="txt" style={st.done ? { textDecoration: 'line-through', color: 'var(--muted)' } : undefined}>
-            {iReceive ? `${partner} te devolve` : `Você devolve para ${partner}`} <b>{money(Math.abs(st.amount_cents))}</b> <span className="muted">no Pix</span>
-          </span>
-          <button className="btn sm" onClick={toggle}>{st.done ? 'Desfazer' : 'Marcar feito'}</button>
-        </div>
       )}
     </div>
   );
@@ -344,32 +358,26 @@ const HOUSING_ICONS: [RegExp, typeof Home][] = [
 ];
 const iconFor = (name: string) => HOUSING_ICONS.find(([re]) => re.test(name))?.[1] ?? Home;
 
-export function HousingCard({ s }: { s: Summary }) {
-  const [mode, setMode] = useState<'mine' | 'couple'>('mine');
+function HousingCard({ s }: { s: Summary }) {
   const h = s.housing;
-  const value = mode === 'mine' ? h.pct_of_my_salary : h.pct_of_couple_salary;
+  const value = h.pct_of_salary;
   const scaleMax = Math.max(60, Math.ceil(value / 10) * 10);
   const tone = value <= h.ref_pct ? '' : value <= h.ref_pct + 10 ? 'warn' : 'bad';
-  const total = mode === 'mine' ? h.total_cents : h.couple_total_cents;
 
   return (
     <div className="card">
       <div className="card-head">
         <div>
           <div className="card-title">Moradia</div>
-          <div className="label" style={{ marginTop: 14 }}>{mode === 'mine' ? 'Quanto você gasta pra morar' : 'Quanto o casal gasta pra morar'}</div>
-          <Money cents={total} size="lg" />
+          <div className="label" style={{ marginTop: 14 }}>Quanto você gasta pra morar</div>
+          <Money cents={h.total_cents} size="lg" />
           <div className="sub" style={{ marginTop: 6 }}>
             <b className={tone ? 'neg' : 'pos'}>{tone ? '!' : '✓'} {pct(value)} do salário</b> &nbsp;referência: até {h.ref_pct}%
           </div>
         </div>
         <div className="illus" aria-hidden>🏠</div>
       </div>
-      <div className="seg">
-        <button className={mode === 'mine' ? 'on' : ''} onClick={() => setMode('mine')}>Só meu salário</button>
-        <button className={mode === 'couple' ? 'on' : ''} onClick={() => setMode('couple')}>Salário do casal</button>
-      </div>
-      <div className="gauge">
+      <div className="gauge" style={{ marginTop: 30 }}>
         <div className="track">
           <div className={`bar ${tone}`} style={{ width: `${Math.min((value / scaleMax) * 100, 100)}%` }} />
         </div>
@@ -387,7 +395,7 @@ export function HousingCard({ s }: { s: Summary }) {
               <span className="ico"><Icon size={16} /></span>
               <div style={{ minWidth: 0 }}>
                 <div className="n">{i.name}</div>
-                <div className="v">{i.estimated && '≈ '}{money(mode === 'mine' ? i.share_cents : i.amount_cents)}</div>
+                <div className="v">{i.estimated && '≈ '}{money(i.amount_cents)}</div>
               </div>
             </div>
           );

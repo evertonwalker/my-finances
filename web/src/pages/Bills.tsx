@@ -11,12 +11,11 @@ function period(b: Bill) {
 }
 
 export default function Bills({ scope }: { scope: 'house' | 'personal' }) {
-  const { openForm, settings } = useApp();
+  const { openForm } = useApp();
   const { data, error } = useFetch<Bill[]>('/bills');
   const bills = (data ?? []).filter((b) => b.scope === scope);
   const total = bills.reduce((a, b) => a + b.amount_cents, 0);
   const title = scope === 'house' ? 'Contas da casa' : 'Contas pessoais';
-  const who = (b: Bill) => (b.payer === 'me' ? settings?.me_name ?? 'Eu' : settings?.partner_name ?? 'Parceiro(a)');
 
   return (
     <div className="card">
@@ -25,8 +24,8 @@ export default function Bills({ scope }: { scope: 'house' | 'personal' }) {
           <h2>{title}</h2>
           <div className="sub">
             {scope === 'house'
-              ? `Divididas entre o casal (${settings?.my_share_pct ?? 50}% / ${100 - (settings?.my_share_pct ?? 50)}%). Total cadastrado: ${money(total)}`
-              : `Só suas — entram no saldo e em “Contas a pagar”. Total: ${money(total)}`}
+              ? `Contas fixas de moradia (aluguel, condomínio, luz...). Total: ${money(total)}`
+              : `Contas fixas pessoais (saúde, assinaturas, família...). Total: ${money(total)}`}
           </div>
         </div>
         <button className="btn primary" onClick={() => openForm({ kind: 'bill', scope })}>
@@ -43,7 +42,6 @@ export default function Bills({ scope }: { scope: 'house' | 'personal' }) {
               <thead>
                 <tr>
                   <th>Nome</th>
-                  {scope === 'house' && <th>Quem paga</th>}
                   <th>Vence</th>
                   <th>Período</th>
                   <th>Tags</th>
@@ -58,12 +56,6 @@ export default function Bills({ scope }: { scope: 'house' | 'personal' }) {
                       <b>{b.name}</b>
                       {b.note && <div className="label">{b.note}</div>}
                     </td>
-                    {scope === 'house' && (
-                      <td>
-                        <span className="dot" style={{ background: b.payer === 'me' ? 'var(--primary)' : 'var(--pink)', marginRight: 6 }} />
-                        {who(b)}
-                      </td>
-                    )}
                     <td>Dia {dd(b.due_day)}</td>
                     <td>{period(b)}</td>
                     <td>
@@ -87,7 +79,7 @@ export default function Bills({ scope }: { scope: 'house' | 'personal' }) {
               </tbody>
               <tfoot>
                 <tr>
-                  <td colSpan={scope === 'house' ? 5 : 4}>Total</td>
+                  <td colSpan={4}>Total</td>
                   <td className="r">{money(total)}</td>
                   <td />
                 </tr>
@@ -97,12 +89,10 @@ export default function Bills({ scope }: { scope: 'house' | 'personal' }) {
           <ul className="list m-list">
             {bills.map((b) => (
               <li key={b.id} onClick={() => openForm({ kind: 'bill', scope, item: b })} style={{ cursor: 'pointer' }}>
-                {scope === 'house' && <span className="dot" style={{ background: b.payer === 'me' ? 'var(--primary)' : 'var(--pink)' }} />}
                 <div className="grow">
                   <b>{b.name}</b>
                   <div className="label">
                     Dia {dd(b.due_day)} · {period(b)}
-                    {scope === 'house' && ` · ${who(b)}`}
                   </div>
                 </div>
                 <span className="amt">{money(b.amount_cents)}</span>

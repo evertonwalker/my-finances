@@ -386,6 +386,29 @@ table.tbl { width: 100%; border-collapse: collapse; }
 .form-actions .spacer { flex: 1; }
 .form-error { grid-column: 1 / -1; color: var(--red); font-size: 13px; }
 .hint { font-size: 11px; color: var(--muted); }
+.cat-picker { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.cat-picker button {
+  border: 1px solid var(--border); background: var(--surface-2); border-radius: 10px;
+  padding: 10px 6px; font-size: 12px; font-weight: 600; color: var(--text-2);
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+}
+.cat-picker button span { font-size: 20px; }
+.cat-picker button.on { border-color: var(--primary); background: var(--primary-soft); color: var(--primary); }
+.filter-chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 6px; }
+.filter-chips button {
+  border: 1px solid var(--border); background: var(--surface); border-radius: 999px;
+  padding: 6px 12px; font-size: 12px; font-weight: 600; color: var(--text-2); white-space: nowrap;
+}
+.filter-chips button.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+.day-head {
+  display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); padding: 14px 0 2px; border-bottom: 1px solid var(--border);
+}
+.cat-ico { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; font-size: 17px; flex: none; }
+.cat-bars { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+.cat-bar .row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; }
+.cat-bar .track { height: 6px; background: var(--surface-2); border-radius: 999px; overflow: hidden; }
+.cat-bar .fill { height: 100%; border-radius: 999px; }
 
 .toast {
   position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);

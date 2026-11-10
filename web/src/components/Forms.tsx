@@ -1,8 +1,9 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { api } from '../api';
-import { centsToInput, parseMoney } from '../format';
+import { EXPENSE_CATEGORIES } from '../categories';
+import { centsToInput, dd, parseMoney } from '../format';
 import { useApp, useFetch, type FormRequest } from '../store';
-import type { Card } from '../types';
+import type { Card, ExpenseCategory } from '../types';
 import { Field, Modal, Toggle } from './ui';
 
 /** Renderiza o formulário pedido via openForm() — usado pelo "+ Adicionar" e pelas páginas. */
@@ -11,15 +12,18 @@ export function FormHost() {
   if (!form) return null;
   const titles: Record<FormRequest['kind'], string> = {
     bill: form.kind === 'bill' && form.scope === 'house' ? 'Conta da casa' : 'Conta pessoal',
+    expense: 'Gasto do mês',
     card: 'Cartão',
     invoice: 'Fatura do cartão',
     income: 'Renda',
     reserve: 'Movimento da reserva',
   };
   const editing = 'item' in form && form.item;
+  const masculine = form.kind === 'card' || form.kind === 'expense';
   return (
-    <Modal title={`${editing ? 'Editar' : 'Nova'} ${titles[form.kind].toLowerCase()}`} onClose={closeForm}>
+    <Modal title={`${editing ? 'Editar' : masculine ? 'Novo' : 'Nova'} ${titles[form.kind].toLowerCase()}`} onClose={closeForm}>
       {form.kind === 'bill' && <BillForm req={form} />}
+      {form.kind === 'expense' && <ExpenseForm req={form} />}
       {form.kind === 'card' && <CardForm req={form} />}
       {form.kind === 'invoice' && <InvoiceForm req={form} />}
       {form.kind === 'income' && <IncomeForm req={form} />}
@@ -114,12 +118,10 @@ function Form({ onSubmit, children }: { onSubmit: () => void; children: ReactNod
 
 // ------------------------------------------------------------------
 function BillForm({ req }: { req: Extract<FormRequest, { kind: 'bill' }> }) {
-  const { settings } = useApp();
   const it = req.item;
   const [scope, setScope] = useState(it?.scope ?? req.scope);
   const [name, setName] = useState(it?.name ?? '');
   const [amount, setAmount] = useState(it ? centsToInput(it.amount_cents) : '');
-  const [payer, setPayer] = useState(it?.payer ?? 'me');
   const [dueDay, setDueDay] = useState(it?.due_day ?? 5);
   const [isHousing, setIsHousing] = useState(it?.is_housing ?? false);
   const [estimated, setEstimated] = useState(it?.estimated ?? false);
@@ -133,7 +135,7 @@ function BillForm({ req }: { req: Extract<FormRequest, { kind: 'bill' }> }) {
   const save = () =>
     submit(() => {
       const body = {
-        name, scope, payer: scope === 'personal' ? 'me' : payer, due_day: dueDay,
+        name, scope, due_day: dueDay,
         amount_cents: parseMoney(amount), is_housing: scope === 'house' && isHousing, estimated, featured,
         category, note, start_month: start || null, end_month: end || null,
       };
@@ -153,27 +155,17 @@ function BillForm({ req }: { req: Extract<FormRequest, { kind: 'bill' }> }) {
       </Field>
       <Field label="Tipo">
         <select value={scope} onChange={(e) => setScope(e.target.value as 'house' | 'personal')}>
-          <option value="house">Conta da casa (dividida)</option>
+          <option value="house">Conta da casa</option>
           <option value="personal">Conta pessoal</option>
         </select>
       </Field>
-      {scope === 'house' ? (
-        <Field label="Quem paga">
-          <select value={payer} onChange={(e) => setPayer(e.target.value as 'me' | 'partner')}>
-            <option value="me">{settings?.me_name ?? 'Eu'}</option>
-            <option value="partner">{settings?.partner_name ?? 'Parceiro(a)'}</option>
-          </select>
-        </Field>
-      ) : (
-        <Field label="Categoria">
-          <input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Ex.: saúde" />
-        </Field>
-      )}
-      {scope === 'house' && (
-        <Field label="Categoria">
-          <input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Ex.: moradia, obra" />
-        </Field>
-      )}
+      <Field label="Categoria">
+        <input
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          placeholder={scope === 'house' ? 'Ex.: moradia, obra' : 'Ex.: saúde'}
+        />
+      </Field>
       <Field label="Início (opcional)" hint="Vazio = desde sempre">
         <input type="month" value={start} onChange={(e) => setStart(e.target.value)} />
       </Field>
@@ -281,9 +273,7 @@ function InvoiceForm({ req }: { req: Extract<FormRequest, { kind: 'invoice' }> }
 
 // ------------------------------------------------------------------
 function IncomeForm({ req }: { req: Extract<FormRequest, { kind: 'income' }> }) {
-  const { settings } = useApp();
   const it = req.item;
-  const [owner, setOwner] = useState(it?.owner ?? 'me');
   const [description, setDescription] = useState(it?.description ?? 'Salário');
   const [amount, setAmount] = useState(it ? centsToInput(it.amount_cents) : '');
   const [start, setStart] = useState(it?.start_month ?? '');
@@ -292,19 +282,13 @@ function IncomeForm({ req }: { req: Extract<FormRequest, { kind: 'income' }> }) 
 
   const save = () =>
     submit(() => {
-      const body = { owner, description, amount_cents: parseMoney(amount), start_month: start || null, end_month: end || null };
+      const body = { description, amount_cents: parseMoney(amount), start_month: start || null, end_month: end || null };
       return it ? api.put(`/incomes/${it.id}`, body) : api.post('/incomes', body);
     });
 
   return (
     <Form onSubmit={save}>
-      <Field label="De quem">
-        <select value={owner} onChange={(e) => setOwner(e.target.value as 'me' | 'partner')}>
-          <option value="me">{settings?.me_name ?? 'Eu'}</option>
-          <option value="partner">{settings?.partner_name ?? 'Parceiro(a)'}</option>
-        </select>
-      </Field>
-      <Field label="Descrição">
+      <Field label="Descrição" full>
         <input value={description} onChange={(e) => setDescription(e.target.value)} required />
       </Field>
       <Field label="Valor líquido mensal (R$)" full>
@@ -317,6 +301,55 @@ function IncomeForm({ req }: { req: Extract<FormRequest, { kind: 'income' }> }) 
         <input type="month" value={end} onChange={(e) => setEnd(e.target.value)} />
       </Field>
       <Actions busy={busy} error={error} onDelete={it ? () => submit(() => api.del(`/incomes/${it.id}`), 'Excluído') : undefined} />
+    </Form>
+  );
+}
+
+// ------------------------------------------------------------------
+function ExpenseForm({ req }: { req: Extract<FormRequest, { kind: 'expense' }> }) {
+  const { month } = useApp();
+  const it = req.item;
+  const today = new Date();
+  const todayIso = `${today.getFullYear()}-${dd(today.getMonth() + 1)}-${dd(today.getDate())}`;
+  const [date, setDate] = useState(it?.date ?? (todayIso.startsWith(month) ? todayIso : `${month}-01`));
+  const [description, setDescription] = useState(it?.description ?? '');
+  const [category, setCategory] = useState<ExpenseCategory>(it?.category ?? 'comida');
+  const [amount, setAmount] = useState(it ? centsToInput(it.amount_cents) : '');
+  const { busy, error, submit } = useSubmit();
+
+  const save = () =>
+    submit(() => {
+      const body = { date, description, category, amount_cents: parseMoney(amount) };
+      return it ? api.put(`/expenses/${it.id}`, body) : api.post('/expenses', body);
+    }, it ? 'Gasto atualizado ✔' : 'Gasto lançado ✔');
+
+  return (
+    <Form onSubmit={save}>
+      <Field label="Valor (R$)" full>
+        <MoneyInput value={amount} onChange={setAmount} autoFocus />
+      </Field>
+      <div className="field full">
+        <span>Categoria</span>
+        <div className="cat-picker">
+          {EXPENSE_CATEGORIES.map((c) => (
+            <button
+              type="button"
+              key={c.id}
+              className={category === c.id ? 'on' : ''}
+              onClick={() => setCategory(c.id)}
+            >
+              <span aria-hidden>{c.emoji}</span> {c.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <Field label="Descrição">
+        <input value={description} onChange={(e) => setDescription(e.target.value)} required placeholder="Ex.: Almoço" />
+      </Field>
+      <Field label="Data">
+        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+      </Field>
+      <Actions busy={busy} error={error} onDelete={it ? () => submit(() => api.del(`/expenses/${it.id}`), 'Excluído') : undefined} />
     </Form>
   );
 }

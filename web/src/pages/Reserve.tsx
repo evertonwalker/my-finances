@@ -18,7 +18,7 @@ export default function Reserve() {
       <div className="card">
         <div className="card-head">
           <div>
-            <div className="card-title">Nossa reserva</div>
+            <div className="card-title">Minha reserva</div>
             <div className="label" style={{ marginTop: 14 }}>Saldo atual</div>
             <Money cents={balance} size="lg" />
           </div>

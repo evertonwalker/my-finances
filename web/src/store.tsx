@@ -1,10 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { api } from './api';
 import { currentMonth } from './format';
-import type { Bill, Card, Income, ReserveEntry, Settings } from './types';
+import type { Bill, Card, Income, MonthlyExpense, ReserveEntry, Settings } from './types';
 
 export type FormRequest =
   | { kind: 'bill'; scope: 'house' | 'personal'; item?: Bill }
+  | { kind: 'expense'; item?: MonthlyExpense }
   | { kind: 'card'; item?: Card }
   | { kind: 'invoice'; cardId?: number; month?: string; amount_cents?: number }
   | { kind: 'income'; item?: Income }

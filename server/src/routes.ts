@@ -1,23 +1,28 @@
 import { Hono } from 'hono';
 import { z, type ZodTypeAny } from 'zod';
-import { all, one, run, getSettings, DEFAULT_SETTINGS } from './db.js';
+import { all, one, run, getSettings, DEFAULT_SETTINGS, EXPENSE_CATEGORIES } from './db.js';
 import { Cents, Day, Month, OptMonth, bool } from './util.js';
 import { buildSummary, buildCashflow } from './summary.js';
 
 export const api = new Hono();
 
 type Row = Record<string, unknown>;
+const IsoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use o formato AAAA-MM-DD');
 
 /** Cria rotas REST (GET lista / POST / PUT :id / DELETE :id) para uma tabela simples. */
 function crud(path: string, table: string, schema: z.ZodObject<Record<string, ZodTypeAny>>, opts: {
   order: string;
   map?: (r: Row) => Row;
-  toDb?: (d: Row) => Row;
+  /** filtro opcional da listagem a partir da query string */
+  filter?: (q: (k: string) => string | undefined) => { where: string; args: (string | number)[] } | null;
 }) {
   const map = opts.map ?? ((r: Row) => r);
-  const toDb = opts.toDb ?? ((d: Row) => d);
 
-  api.get(path, async (c) => c.json((await all(`SELECT * FROM ${table} ORDER BY ${opts.order}`)).map(map)));
+  api.get(path, async (c) => {
+    const f = opts.filter?.((k) => c.req.query(k)) ?? null;
+    const rows = await all(`SELECT * FROM ${table} ${f ? `WHERE ${f.where}` : ''} ORDER BY ${opts.order}`, f?.args ?? []);
+    return c.json(rows.map(map));
+  });
 
   api.get(`${path}/:id`, async (c) => {
     const row = await one(`SELECT * FROM ${table} WHERE id = ?`, [Number(c.req.param('id'))]);
@@ -27,7 +32,7 @@ function crud(path: string, table: string, schema: z.ZodObject<Record<string, Zo
   api.post(path, async (c) => {
     const parsed = schema.safeParse(await c.req.json());
     if (!parsed.success) return c.json({ error: 'validation', issues: parsed.error.issues }, 400);
-    const data = toDb(parsed.data);
+    const data = parsed.data as Row;
     const cols = Object.keys(data);
     const row = await one(
       `INSERT INTO ${table} (${cols.join(',')}) VALUES (${cols.map(() => '?').join(',')}) RETURNING *`,
@@ -40,8 +45,8 @@ function crud(path: string, table: string, schema: z.ZodObject<Record<string, Zo
     const id = Number(c.req.param('id'));
     const parsed = schema.partial().safeParse(await c.req.json());
     if (!parsed.success) return c.json({ error: 'validation', issues: parsed.error.issues }, 400);
-    const data = toDb(parsed.data);
-    const cols = Object.keys(data);
+    const data = parsed.data as Row;
+    const cols = Object.keys(data).filter((k) => data[k] !== undefined);
     if (cols.length) {
       await run(`UPDATE ${table} SET ${cols.map((k) => `${k} = ?`).join(',')} WHERE id = ?`, [
         ...cols.map((k) => data[k] as never),
@@ -58,21 +63,20 @@ function crud(path: string, table: string, schema: z.ZodObject<Record<string, Zo
   });
 }
 
-// ---------- Rendas ----------
+// ---------- Renda ----------
 crud(
   '/incomes',
   'incomes',
   z.object({
-    owner: z.enum(['me', 'partner']),
     description: z.string().min(1),
     amount_cents: Cents,
     start_month: OptMonth,
     end_month: OptMonth,
   }),
-  { order: 'owner, amount_cents DESC' },
+  { order: 'amount_cents DESC' },
 );
 
-// ---------- Contas (casa e pessoais) ----------
+// ---------- Contas fixas (casa e pessoais) ----------
 const mapBill = (r: Row) => ({
   ...r,
   is_housing: bool(r.is_housing),
@@ -86,7 +90,6 @@ crud(
     name: z.string().min(1),
     amount_cents: Cents,
     scope: z.enum(['house', 'personal']),
-    payer: z.enum(['me', 'partner']).default('me'),
     due_day: Day.default(5),
     is_housing: z.boolean().default(false),
     estimated: z.boolean().default(false),
@@ -97,6 +100,25 @@ crud(
     end_month: OptMonth,
   }),
   { order: 'scope, amount_cents DESC', map: mapBill },
+);
+
+// ---------- Contas do mês (gastos variáveis) ----------
+crud(
+  '/expenses',
+  'monthly_expenses',
+  z.object({
+    date: IsoDate,
+    description: z.string().min(1),
+    category: z.enum(EXPENSE_CATEGORIES).default('outros'),
+    amount_cents: Cents.min(0),
+  }),
+  {
+    order: 'date DESC, id DESC',
+    filter: (q) => {
+      const m = Month.safeParse(q('month'));
+      return m.success ? { where: `to_char(date, 'YYYY-MM') = ?`, args: [m.data] } : null;
+    },
+  },
 );
 
 // ---------- Cartões ----------
@@ -128,12 +150,13 @@ api.post('/invoices', async (c) => {
   const parsed = InvoiceSchema.safeParse(await c.req.json());
   if (!parsed.success) return c.json({ error: 'validation', issues: parsed.error.issues }, 400);
   const { card_id, month, amount_cents } = parsed.data;
-  await run(
+  const row = await one(
     `INSERT INTO invoices (card_id, month, amount_cents) VALUES (?, ?, ?)
-     ON CONFLICT(card_id, month) DO UPDATE SET amount_cents = excluded.amount_cents`,
+     ON CONFLICT (card_id, month) DO UPDATE SET amount_cents = EXCLUDED.amount_cents
+     RETURNING *`,
     [card_id, month, amount_cents],
   );
-  return c.json(await one('SELECT * FROM invoices WHERE card_id = ? AND month = ?', [card_id, month]), 201);
+  return c.json(row, 201);
 });
 api.delete('/invoices/:id', async (c) => {
   await run('DELETE FROM invoices WHERE id = ?', [Number(c.req.param('id'))]);
@@ -144,11 +167,7 @@ api.delete('/invoices/:id', async (c) => {
 crud(
   '/reserve',
   'reserve_entries',
-  z.object({
-    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-    description: z.string().min(1),
-    amount_cents: Cents,
-  }),
+  z.object({ date: IsoDate, description: z.string().min(1), amount_cents: Cents }),
   { order: 'date DESC, id DESC' },
 );
 
@@ -167,29 +186,13 @@ api.post('/payments/toggle', async (c) => {
   return c.json({ paid: true });
 });
 
-// ---------- Acerto do mês (Pix entre o casal) ----------
-api.post('/settlements/:month/toggle', async (c) => {
-  const month = Month.safeParse(c.req.param('month'));
-  if (!month.success) return c.json({ error: 'validation' }, 400);
-  const body = await c.req.json().catch(() => ({}));
-  const existing = await one('SELECT month FROM settlements WHERE month = ?', [month.data]);
-  if (existing) {
-    await run('DELETE FROM settlements WHERE month = ?', [month.data]);
-    return c.json({ done: false });
-  }
-  await run('INSERT INTO settlements (month, amount_cents) VALUES (?, ?)', [month.data, Number(body.amount_cents) || 0]);
-  return c.json({ done: true });
-});
-
 // ---------- Configurações ----------
 api.get('/settings', async (c) => c.json(await getSettings()));
 api.put('/settings', async (c) => {
   const parsed = z
     .object({
       me_name: z.string().min(1),
-      partner_name: z.string().min(1),
-      my_share_pct: z.number().min(0).max(100),
-      daily_budget_cents: Cents.min(0),
+      month_budget_cents: Cents.min(0),
       housing_ref_pct: z.number().min(0).max(100),
       reserve_goal_cents: Cents.min(0),
     })

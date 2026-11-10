@@ -42,7 +42,6 @@ const SCHEMA = [
   )`,
   `CREATE TABLE IF NOT EXISTS incomes (
     id SERIAL PRIMARY KEY,
-    owner TEXT NOT NULL CHECK (owner IN ('me','partner')),
     description TEXT NOT NULL,
     amount_cents BIGINT NOT NULL,
     start_month TEXT,
@@ -53,7 +52,6 @@ const SCHEMA = [
     name TEXT NOT NULL,
     amount_cents BIGINT NOT NULL,
     scope TEXT NOT NULL CHECK (scope IN ('house','personal')),
-    payer TEXT NOT NULL DEFAULT 'me' CHECK (payer IN ('me','partner')),
     due_day INTEGER NOT NULL DEFAULT 5,
     is_housing BOOLEAN NOT NULL DEFAULT FALSE,
     estimated BOOLEAN NOT NULL DEFAULT FALSE,
@@ -94,21 +92,33 @@ const SCHEMA = [
     description TEXT NOT NULL,
     amount_cents BIGINT NOT NULL
   )`,
-  `CREATE TABLE IF NOT EXISTS settlements (
-    month TEXT PRIMARY KEY,
-    amount_cents BIGINT NOT NULL,
-    done_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  // Contas do mês: gastos variáveis na rua (comida, roupas, eventualidades...)
+  `CREATE TABLE IF NOT EXISTS monthly_expenses (
+    id SERIAL PRIMARY KEY,
+    date DATE NOT NULL,
+    description TEXT NOT NULL,
+    category TEXT NOT NULL DEFAULT 'outros',
+    amount_cents BIGINT NOT NULL
   )`,
+  `CREATE INDEX IF NOT EXISTS monthly_expenses_date_idx ON monthly_expenses (date)`,
+  // --- migração da versão "casal" para uso individual ---
+  `DROP TABLE IF EXISTS settlements`,
+  `ALTER TABLE incomes DROP COLUMN IF EXISTS owner`,
+  `ALTER TABLE bills DROP COLUMN IF EXISTS payer`,
+  `INSERT INTO settings (key, value)
+     SELECT 'month_budget_cents', value FROM settings WHERE key = 'daily_budget_cents'
+   ON CONFLICT (key) DO NOTHING`,
+  `DELETE FROM settings WHERE key IN ('partner_name', 'my_share_pct', 'daily_budget_cents')`,
 ];
 
 export const DEFAULT_SETTINGS: Record<string, string> = {
-  me_name: 'Pessoa 1',
-  partner_name: 'Esposa',
-  my_share_pct: '50',
-  daily_budget_cents: '50000',
+  me_name: 'Você',
+  month_budget_cents: '150000',
   housing_ref_pct: '30',
   reserve_goal_cents: '10000000',
 };
+
+export const EXPENSE_CATEGORIES = ['comida', 'roupas', 'eventualidades', 'outros'] as const;
 
 export async function migrate() {
   for (const sql of SCHEMA) await run(sql);
@@ -123,9 +133,7 @@ export async function getSettings() {
   for (const r of rows) s[r.key] = r.value;
   return {
     me_name: s.me_name,
-    partner_name: s.partner_name,
-    my_share_pct: Number(s.my_share_pct),
-    daily_budget_cents: Number(s.daily_budget_cents),
+    month_budget_cents: Number(s.month_budget_cents),
     housing_ref_pct: Number(s.housing_ref_pct),
     reserve_goal_cents: Number(s.reserve_goal_cents),
   };
