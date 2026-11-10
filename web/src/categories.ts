@@ -1,6 +1,6 @@
 import type { ExpenseCategory } from './types';
 
-/** Categorias das "Contas do mês" (gastos variáveis na rua). */
+/** Categorias dos "Gastos mensais" (gastos variáveis na rua). */
 export const EXPENSE_CATEGORIES: { id: ExpenseCategory; label: string; emoji: string; color: string }[] = [
   { id: 'comida', label: 'Comida', emoji: '🍔', color: 'var(--amber)' },
   { id: 'roupas', label: 'Roupas', emoji: '👕', color: 'var(--primary)' },

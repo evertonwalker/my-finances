@@ -44,7 +44,7 @@ function core(month: string, d: Data) {
   const houseTotal = sum(houseBills, (b) => b.amount_cents);
   const personalTotal = sum(personalBills, (b) => b.amount_cents) + sum(invoices, (i) => i.amount_cents);
 
-  // Contas do mês: usa o orçamento; se já gastou mais, usa o gasto real
+  // Gastos mensais: usa o orçamento; se já gastou mais, usa o gasto real
   const monthExpenses = d.expenses.filter((e) => e.month === month);
   const monthSpent = sum(monthExpenses, (e) => e.total_cents);
   const monthBudget = s.month_budget_cents;
@@ -97,7 +97,7 @@ export async function buildSummary(month: string) {
     return { month: m, total_cents: sum(d.invoices.filter((i) => i.month === m), (i) => i.amount_cents) };
   });
 
-  // ----- Contas do mês por categoria -----
+  // ----- Gastos mensais por categoria -----
   const byCategory = EXPENSE_CATEGORIES.map((cat) => {
     const e = c.monthExpenses.find((x) => x.category === cat);
     return { category: cat, total_cents: e?.total_cents ?? 0, count: e?.count ?? 0 };

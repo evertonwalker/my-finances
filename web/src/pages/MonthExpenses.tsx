@@ -38,7 +38,7 @@ export default function MonthExpenses() {
       <div className="card">
         <div className="card-head">
           <div>
-            <div className="card-title">Contas do mês</div>
+            <div className="card-title">Gastos mensais</div>
             <div className="sub" style={{ marginTop: 2 }}>Gastos do dia a dia na rua: comida, roupas e eventualidades.</div>
             <div className="label" style={{ marginTop: 14 }}>Gasto em {monthLong(month).toLowerCase()}</div>
             <Money cents={spent} size="lg" className={over ? 'neg' : ''} />

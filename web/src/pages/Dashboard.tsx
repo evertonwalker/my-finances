@@ -1,4 +1,4 @@
-﻿import { ArrowDownRight, ArrowUpRight, Building, Check, ChevronLeft, ChevronRight, CreditCard, KeyRound, Pencil, Plus, Wifi, Zap, Home } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, Building, Check, ChevronLeft, ChevronRight, CreditCard, KeyRound, Pencil, Plus, Wifi, Zap, Home } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
@@ -59,7 +59,7 @@ function BalanceCard({ s }: { s: Summary }) {
   const segs = [
     { label: 'Contas da casa', v: b.house_cents, p: b.pct.house, color: 'var(--navy)' },
     { label: 'Contas pessoais', v: b.personal_cents, p: b.pct.personal, color: 'var(--primary)' },
-    { label: 'Contas do mês', v: b.month_cents, p: b.pct.month, color: 'var(--amber)' },
+    { label: 'Gastos mensais', v: b.month_cents, p: b.pct.month, color: 'var(--amber)' },
   ];
   const total = Math.max(b.salary_cents, b.house_cents + b.personal_cents + b.month_cents, 1);
   return (
@@ -96,12 +96,12 @@ function BalanceCard({ s }: { s: Summary }) {
         {segs.map((sg) => (
           <div key={sg.label}>
             <div className="l"><span className="dot" style={{ background: sg.color }} /> {sg.label}</div>
-            <div className="v">− {money(sg.v)} <small>· {pct(sg.p)}</small></div>
+            <div className="v">− {money(sg.v)} <small>{pct(sg.p)} do salário</small></div>
           </div>
         ))}
         <div>
           <div className="l"><span className="dot" style={{ background: 'var(--green)' }} /> <b>= Sobra</b></div>
-          <div className={`v ${positive ? 'pos' : 'neg'}`}>{money(b.free_cents)} <small>· {pct(b.pct.free)}</small></div>
+          <div className={`v ${positive ? 'pos' : 'neg'}`}>{money(b.free_cents)} <small>{pct(b.pct.free)} do salário</small></div>
         </div>
       </div>
     </div>
@@ -119,7 +119,7 @@ export function MonthSpendingCard({ s }: { s: Summary }) {
     <div className="card">
       <div className="card-head">
         <div>
-          <div className="card-title">Contas do mês</div>
+          <div className="card-title">Gastos mensais</div>
           <div className="label" style={{ marginTop: 14 }}>Gasto em {monthName(s.month).toLowerCase()}</div>
           <Money cents={m.spent_cents} size="lg" className={over ? 'neg' : ''} />
           <div className="sub" style={{ marginTop: 4 }}>
@@ -178,7 +178,7 @@ export function MonthSpendingCard({ s }: { s: Summary }) {
         {m.recent.length === 0 && <li className="muted">Nenhum gasto lançado neste mês.</li>}
       </ul>
       <div className="settle">
-        <Link to="/contas-mes" className="txt" style={{ color: 'var(--primary)', fontWeight: 600 }}>Ver todos</Link>
+        <Link to="/gastos" className="txt" style={{ color: 'var(--primary)', fontWeight: 600 }}>Ver todos</Link>
         <button className="btn sm primary" onClick={() => openForm({ kind: 'expense' })}>
           <Plus size={14} /> Lançar gasto
         </button>

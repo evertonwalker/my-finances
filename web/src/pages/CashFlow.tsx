@@ -13,7 +13,7 @@ export default function CashFlow() {
       <div className="page-head">
         <div>
           <h2>Fluxo de caixa</h2>
-          <div className="sub">Projeção dos próximos 12 meses a partir do mês selecionado, com base nas contas recorrentes, faturas lançadas e no orçamento das contas do mês (ou no gasto real, se for maior).</div>
+          <div className="sub">Projeção dos próximos 12 meses a partir do mês selecionado, com base nas contas recorrentes, faturas lançadas e no orçamento dos gastos mensais (ou no gasto real, se for maior).</div>
         </div>
       </div>
       {error && <p className="neg">{error}</p>}
@@ -49,7 +49,7 @@ export default function CashFlow() {
                   <th className="r">Salário</th>
                   <th className="r">Contas da casa</th>
                   <th className="r">Contas pessoais</th>
-                  <th className="r hide-sm">Contas do mês</th>
+                  <th className="r hide-sm">Gastos mensais</th>
                   <th className="r">Sobra</th>
                   <th className="r hide-sm">Acumulado</th>
                 </tr>

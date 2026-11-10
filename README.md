@@ -1,6 +1,6 @@
 # my-finances — Finn 💙
 
-Finanças pessoais: saldo previsto, contas a pagar, contas do mês (gastos na rua), cartões, moradia, reserva e fluxo de caixa.
+Finanças pessoais: saldo previsto, contas a pagar, gastos mensais (gastos na rua), cartões, moradia, reserva e fluxo de caixa.
 Tem CRUD para tudo, light/dark mode, layout responsivo (dá para instalar no celular como app) e um backend leve.
 
 ## Stack
@@ -37,16 +37,16 @@ Para testar no celular pela mesma rede Wi-Fi, abra `http://<ip-do-pc>:5173`.
 
 ## Como as contas são calculadas
 
-**Saldo previsto** = renda − contas da casa − contas pessoais (incluindo faturas do mês) − contas do mês.
+**Saldo previsto** = renda − contas da casa − contas pessoais (incluindo faturas do mês) − gastos mensais.
 
 | Tipo | O que é | Onde cadastra |
 |---|---|---|
 | **Contas da casa** | Fixas de moradia: aluguel, condomínio, luz, internet... | Ajustes → Contas da casa |
 | **Contas pessoais** | Fixas suas: saúde, assinaturas, ajuda à família... | Ajustes → Contas pessoais |
 | **Faturas** | Valor da fatura de cada cartão no mês | Cartões |
-| **Contas do mês** | Gastos variáveis na rua: comida, roupas, eventualidades e outros | Contas do mês (ou o botão **+ Adicionar**) |
+| **Gastos mensais** | Gastos variáveis na rua: comida, roupas, eventualidades e outros | Gastos mensais (ou o botão **+ Adicionar**) |
 
-- **Contas do mês** entram no saldo pelo **orçamento mensal** (definido em *Minha renda → Configurações*). Se você gastar mais que o orçamento, entra o valor gasto. Assim os meses futuros já ficam projetados.
+- **Gastos mensais** entram no saldo pelo **orçamento mensal** (definido em *Minha renda → Configurações*). Se você gastar mais que o orçamento, entra o valor gasto. Assim os meses futuros já ficam projetados.
 - **Contas a pagar** lista as contas fixas e as faturas do mês. Marque cada uma como paga.
 - **Moradia**: contas da casa marcadas como "moradia", comparadas com o seu salário.
 - **Destaques** (ex.: Obra): qualquer conta marcada com "Destacar no painel".
@@ -79,7 +79,7 @@ Todas as rotas ficam em `/api` e exigem `Authorization: Bearer <token>` quando `
 |---|---|
 | Renda | `GET/POST /incomes`, `PUT/DELETE /incomes/:id` |
 | Contas fixas (casa/pessoais) | `GET/POST /bills`, `PUT/DELETE /bills/:id` |
-| Contas do mês | `GET /expenses?month=AAAA-MM`, `POST /expenses`, `PUT/DELETE /expenses/:id` |
+| Gastos mensais | `GET /expenses?month=AAAA-MM`, `POST /expenses`, `PUT/DELETE /expenses/:id` |
 | Cartões | `GET/POST /cards`, `PUT/DELETE /cards/:id` |
 | Faturas | `GET /invoices`, `POST /invoices` (upsert por cartão + mês), `DELETE /invoices/:id` |
 | Reserva | `GET/POST /reserve`, `PUT/DELETE /reserve/:id` |
@@ -101,6 +101,6 @@ server/src
 web/src
   pages/       # Dashboard, MonthExpenses, CashFlow, Cards, Reserve, Income, Bills
   components/  # Layout (sidebar/topbar/bottom-nav), Forms (modais de CRUD), ui
-  categories.ts# categorias das contas do mês
+  categories.ts# categorias dos gastos mensais
   store.tsx    # mês selecionado, tema, refresh, modais
 ```

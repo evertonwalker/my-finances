@@ -92,7 +92,7 @@ const SCHEMA = [
     description TEXT NOT NULL,
     amount_cents BIGINT NOT NULL
   )`,
-  // Contas do mês: gastos variáveis na rua (comida, roupas, eventualidades...)
+  // Gastos mensais: gastos variáveis na rua (comida, roupas, eventualidades...)
   `CREATE TABLE IF NOT EXISTS monthly_expenses (
     id SERIAL PRIMARY KEY,
     date DATE NOT NULL,

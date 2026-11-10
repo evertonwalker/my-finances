@@ -11,7 +11,7 @@ import type { Summary } from '../types';
 
 const MENU = [
   { to: '/', label: 'Visão geral', icon: LayoutGrid },
-  { to: '/contas-mes', label: 'Contas do mês', icon: ShoppingBag },
+  { to: '/gastos', label: 'Gastos mensais', icon: ShoppingBag },
   { to: '/fluxo', label: 'Fluxo de caixa', icon: ArrowLeftRight },
   { to: '/cartoes', label: 'Cartões', icon: CreditCard },
   { to: '/reserva', label: 'Minha reserva', icon: PiggyBank },
@@ -38,7 +38,7 @@ export function Layout({ children }: { children: ReactNode }) {
       <nav className="bottom-nav">
         {[
           { ...MENU[0], short: 'Início' },
-          { ...MENU[1], short: 'Do mês' },
+          { ...MENU[1], short: 'Gastos' },
           { ...SETTINGS_MENU[1], short: 'Casa' },
           { ...SETTINGS_MENU[2], short: 'Pessoais' },
           { ...MENU[3], short: 'Cartões' },
@@ -211,7 +211,7 @@ function Topbar({ onMenu }: { onMenu: () => void }) {
         </div>
         <div className="dropdown" ref={addRef}>
           <div className="split-btn">
-            <button className="btn primary" onClick={() => add({ kind: 'expense' })} title="Lançar gasto do mês">
+            <button className="btn primary" onClick={() => add({ kind: 'expense' })} title="Lançar gasto mensal">
               <Plus size={16} /> <span className="add-label">Adicionar</span>
             </button>
             <button className="btn primary" onClick={() => setAddOpen((v) => !v)} aria-label="Mais opções">
@@ -220,7 +220,7 @@ function Topbar({ onMenu }: { onMenu: () => void }) {
           </div>
           {addOpen && (
             <div className="dropdown-menu">
-              <button onClick={() => add({ kind: 'expense' })}><ShoppingBag size={16} /> Gasto do mês</button>
+              <button onClick={() => add({ kind: 'expense' })}><ShoppingBag size={16} /> Gasto mensal</button>
               <button onClick={() => add({ kind: 'bill', scope: 'house' })}><Home size={16} /> Conta da casa</button>
               <button onClick={() => add({ kind: 'bill', scope: 'personal' })}><Receipt size={16} /> Conta pessoal</button>
               <button onClick={() => add({ kind: 'invoice', month })}><CreditCard size={16} /> Fatura de cartão</button>

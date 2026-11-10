@@ -102,7 +102,7 @@ crud(
   { order: 'scope, amount_cents DESC', map: mapBill },
 );
 
-// ---------- Contas do mês (gastos variáveis) ----------
+// ---------- Gastos mensais (gastos variáveis) ----------
 crud(
   '/expenses',
   'monthly_expenses',

@@ -249,7 +249,7 @@ a { color: inherit; text-decoration: none; }
 .stack-bar > div { min-width: 0; }
 .saldo-legend { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 12px; margin-top: 14px; }
 .saldo-legend .v { font-weight: 700; font-size: 14px; margin-top: 4px; white-space: nowrap; }
-.saldo-legend .v small { font-weight: 500; color: var(--muted); font-size: 11px; }
+.saldo-legend .v small { font-weight: 500; color: var(--muted); font-size: 11px; display: block; margin-top: 1px; }
 .saldo-legend .l { font-size: 12px; color: var(--text-2); display: flex; align-items: center; gap: 6px; }
 
 /* Lists */
@@ -469,10 +469,20 @@ table.tbl { width: 100%; border-collapse: collapse; }
   .month-title { font-size: 17px; }
   .top-actions { gap: 6px; }
   .split-btn .btn { padding: 9px 10px; }
+  .month-picker { min-width: 0; }
+  .month-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .form { grid-template-columns: 1fr; }
   .modal { align-self: end; border-radius: 20px 20px 0 0; margin: 0 -16px -16px; width: 100vw; max-height: 92vh; padding-bottom: calc(22px + env(safe-area-inset-bottom)); }
   .overlay { padding: 16px; }
   .hide-sm { display: none; }
   .table-wrap.responsive { display: none; }
   .m-list { display: block; }
+}
+
+/* Telas bem estreitas: esconde o ano e encolhe os botões para o mês caber ao lado do sino */
+@media (max-width: 400px) {
+  .month-title .year, .month-title svg { display: none; }
+  .month-nav .icon-btn { width: 24px; }
+  .menu-toggle { width: 32px; height: 32px; }
+  .top-actions .icon-btn { width: 32px; height: 32px; }
 }

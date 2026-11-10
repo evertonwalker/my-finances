@@ -92,12 +92,12 @@ function SettingsCard({ s }: { s: Settings }) {
       <div className="page-head">
         <div>
           <h2>Configurações</h2>
-          <div className="sub">Seu nome, orçamento das contas do mês e metas.</div>
+          <div className="sub">Seu nome, orçamento dos gastos mensais e metas.</div>
         </div>
       </div>
       <form className="form" onSubmit={save}>
         <Field label="Seu nome"><input value={name} onChange={(e) => setName(e.target.value)} required /></Field>
-        <Field label="Orçamento das contas do mês (R$)" hint="Comida, roupas e eventualidades. Entra no saldo previsto.">
+        <Field label="Orçamento dos gastos mensais (R$)" hint="Comida, roupas e eventualidades. Entra no saldo previsto.">
           <input inputMode="decimal" value={budget} onChange={(e) => setBudget(e.target.value)} />
         </Field>
         <Field label="Referência de moradia (% do salário)">

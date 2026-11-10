@@ -33,7 +33,7 @@ export default function App() {
       <Layout>
         <Routes>
           <Route path="/" element={<Dashboard />} />
-          <Route path="/contas-mes" element={<MonthExpenses />} />
+          <Route path="/gastos" element={<MonthExpenses />} />
           <Route path="/fluxo" element={<CashFlow />} />
           <Route path="/cartoes" element={<Cards />} />
           <Route path="/reserva" element={<Reserve />} />

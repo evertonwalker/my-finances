@@ -12,7 +12,7 @@ export function FormHost() {
   if (!form) return null;
   const titles: Record<FormRequest['kind'], string> = {
     bill: form.kind === 'bill' && form.scope === 'house' ? 'Conta da casa' : 'Conta pessoal',
-    expense: 'Gasto do mês',
+    expense: 'Gasto mensal',
     card: 'Cartão',
     invoice: 'Fatura do cartão',
     income: 'Renda',
