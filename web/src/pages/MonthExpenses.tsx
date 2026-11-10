@@ -1,4 +1,4 @@
-import { Plus } from 'lucide-react';
+import { Plus, Search, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { categoryInfo, EXPENSE_CATEGORIES } from '../categories';
@@ -9,10 +9,14 @@ import type { ExpenseCategory, MonthlyExpense } from '../types';
 
 const WEEKDAYS = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
 
+/** minúsculas e sem acento: "Aniversário" e "aniversario" dão match */
+const normalize = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+
 export default function MonthExpenses() {
   const { month, settings, openForm } = useApp();
   const { data, error } = useFetch<MonthlyExpense[]>(`/expenses?month=${month}`);
   const [filter, setFilter] = useState<ExpenseCategory | 'all'>('all');
+  const [query, setQuery] = useState('');
 
   const all = data ?? [];
   const spent = all.reduce((a, e) => a + e.amount_cents, 0);
@@ -26,7 +30,12 @@ export default function MonthExpenses() {
     return t;
   }, [all]);
 
-  const visible = filter === 'all' ? all : all.filter((e) => e.category === filter);
+  const q = normalize(query);
+  const visible = all.filter(
+    (e) => (filter === 'all' || e.category === filter) && (!q || normalize(e.description).includes(q)),
+  );
+  const filtering = filter !== 'all' || q.length > 0;
+  const visibleTotal = visible.reduce((a, e) => a + e.amount_cents, 0);
   const byDay = useMemo(() => {
     const g = new Map<string, MonthlyExpense[]>();
     for (const e of visible) g.set(e.date, [...(g.get(e.date) ?? []), e]);
@@ -85,6 +94,22 @@ export default function MonthExpenses() {
             <Plus size={16} /> Lançar gasto
           </button>
         </div>
+        <label className="search-box">
+          <Search size={16} aria-hidden />
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Buscar pela descrição…"
+            aria-label="Buscar gastos pela descrição"
+            enterKeyHint="search"
+          />
+          {query && (
+            <button type="button" onClick={() => setQuery('')} aria-label="Limpar busca">
+              <X size={16} />
+            </button>
+          )}
+        </label>
         <div className="filter-chips">
           <button className={filter === 'all' ? 'on' : ''} onClick={() => setFilter('all')}>Todos · {all.length}</button>
           {EXPENSE_CATEGORIES.map((c) => (
@@ -93,11 +118,21 @@ export default function MonthExpenses() {
             </button>
           ))}
         </div>
+        {data && filtering && visible.length > 0 && (
+          <div className="search-result">
+            <span>{visible.length} {visible.length === 1 ? 'gasto encontrado' : 'gastos encontrados'}</span>
+            <b>{money(visibleTotal)}</b>
+          </div>
+        )}
         {error && <p className="neg">{error}</p>}
         {!data ? (
           <Skeleton />
         ) : byDay.length === 0 ? (
-          <div className="empty-state">Nenhum gasto lançado {filter === 'all' ? 'neste mês' : 'nesta categoria'}.</div>
+          <div className="empty-state">
+            {q
+              ? <>Nenhum gasto com “{query.trim()}” {filter === 'all' ? 'neste mês' : 'nesta categoria'}.</>
+              : <>Nenhum gasto lançado {filter === 'all' ? 'neste mês' : 'nesta categoria'}.</>}
+          </div>
         ) : (
           byDay.map(([date, items]) => {
             const d = new Date(`${date}T12:00`);
